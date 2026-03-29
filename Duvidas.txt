@@ -1,0 +1,12 @@
+Alterar a quantidade, reduz a prioridade de tempo?
+
+Ao printar o nivel de ordem, devo mostrar, para um mesmo nivel,
+linha por linha, ou agrupar?
+
+Como funciona a prioridade temporal ao se alterar uma ordem?
+
+O que acontece com a ordem pegged caso nao haja mais ordens para ela se referenciar?
+
+Quantidades fracionarias sao permitidas? Ou temos um tick size de 1?
+
+O que ocorre ao adicionar pegged order em um lado vazio? (E ja adiantando, essas questoes sao a criterio para eu escolher ou nao?)

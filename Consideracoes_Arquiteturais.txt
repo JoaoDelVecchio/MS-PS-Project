@@ -1,0 +1,24 @@
+4. Regras de Modificação de Ordem (Modify)
+Alteração de Preço: Qualquer alteração de preço faz com que a ordem perca sua prioridade de tempo, indo para o final da fila do seu novo nível de preço.
+
+Aumento de Quantidade: Alterar a quantidade para cima faz com que a ordem perca a prioridade de tempo (evita que traders segurem o lugar na fila com 1 lote e depois inflem a ordem).
+
+Redução de Quantidade: Alterar a quantidade para baixo mantém a prioridade de tempo da ordem intacta.
+
+Modificação de Preço que Causa Match: Se a alteração do preço de uma ordem que já está no book cruzar o spread, ela é tratada como uma nova ordem agressiva e executa imediatamente contra o lado oposto.
+
+Quantidade Zero: Tentar alterar a quantidade de uma ordem para 0 é tratado como um erro de validação (rejeitado), e não como um atalho para cancelamento.
+
+
+5. Comportamento de Ordens Atreladas (Pegged Orders)
+Modificação Manual Bloqueada: O sistema rejeita ativamente (gera Erro) qualquer tentativa do usuário de alterar o preço de uma ordem Pegged por meio do comando modify, pois seu preço é estritamente controlado pela Matching Engine.
+
+Perda de Referência (Livro Vazio): Se o lado do livro que serve de referência para a Pegged Order for totalmente consumido ou cancelado (ex: Peg Bid, e todas as Limits de compra somem), a Pegged Order mantém o seu último preço válido e "congela" ali até que uma nova referência apareça. Ela não é cancelada automaticamente.
+
+6. Tratamento de Erros e Resiliência (Edge Cases)
+Robustez a Falhas: Comandos com erros de digitação (typos), preços negativos, quantidades zeradas ou negativas não quebram o motor (crash). Eles são contidos na camada de validação e retornam um "Error".
+
+Cancelamento de Fantasmas: Tentar cancelar ou modificar um ID de ordem que não existe mais (porque já foi 100% executada, já foi cancelada antes, ou o ID foi digitado errado) gera um erro, protegendo a integridade da memória.
+
+
+Quantity pode apenas ser iteiro
