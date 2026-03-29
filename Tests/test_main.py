@@ -28,3 +28,24 @@ class Test_Book_Foundations(unittest.TestCase):
         output = mock_stdout.getvalue().strip()
 
         self.assertEqual(output, expected_output)
+
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_add_one_limit_sell(self, mock_stdout):
+        input_cmd = "limit sell 20 50"
+        expected_output = "Order Created: sell 50 @ 20 id_1"
+
+        self.parser.process(input_cmd)
+        output = mock_stdout.getvalue().strip()
+
+        self.assertEqual(output, expected_output)
+
+        mock_stdout.seek(0)
+        mock_stdout.truncate(0)
+
+        input_cmd = "print book"
+        expected_output = "Buy Orders:\nSell Orders:\n50 @ 20 (id_1)"
+
+        self.parser.process(input_cmd)
+        output = mock_stdout.getvalue().strip()
+
+        self.assertEqual(output, expected_output)
