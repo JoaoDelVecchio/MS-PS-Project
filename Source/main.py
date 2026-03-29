@@ -14,13 +14,22 @@ class OrderDoubleLinkedList:
             self.tail.next = order
             order.prev = self.tail
             self.tail = order
+    def remove(self, order):
+        if order.prev:
+            order.prev.next = order.next
+        else:
+            self.head = order.next
+
+        if order.next:
+            order.next.prev = order.prev
+        else:
+            self.tail = order.prev
 
 class Order:
     def __init__(self, order_id, side, qty):
         self.order_id = order_id
         self.side = side
         self.qty = qty
-
 
 # Create class Limit order that inherit Order and has price as attribute
 class LimitOrder(Order):
@@ -29,7 +38,6 @@ class LimitOrder(Order):
         self.price = price
         self.prev = None
         self.next = None
-
 
 class IdGenerator:
     def __init__(self):
@@ -41,16 +49,13 @@ class IdGenerator:
 
 class LimitOrderBook:
     def __init__(self):
-        self.id_generator = IdGenerator()
         self.orders_map = {}
         self.bids_dict = {}
         self.asks_dict = {}
         self.bids_prices = []
         self.asks_prices = []
 
-    def add_limit_order(self, side, price, qty):
-        order_id = self.id_generator.generate_id()
-
+    def add_limit_order(self, order_id, side, price, qty):
         order = LimitOrder(order_id, side, price, qty)
         self.orders_map[order_id] = order
 
@@ -69,6 +74,22 @@ class LimitOrderBook:
         
         return order_id
     
+    def remove_order(self, order_id):
+        if order_id not in self.orders_map:
+            return
+        
+        order = self.orders_map[order_id]
+        if order.side == 'buy':
+            price_list = self.bids_dict[order.price]
+            price_list.remove(order)
+
+            if price_list.head is None:
+                del self.bids_dict[order.price]
+                self.bids_prices.remove(order.price) 
+
+        del self.orders_map[order_id]
+
+
     def get_all_positions(self):
         positions = {"buy": [], "sell": []}
 
@@ -87,10 +108,15 @@ class LimitOrderBook:
                 current_order = current_order.next
 
         return positions
-        
+
+    def get_best_bid(self):
+        if not self.bids_prices:
+            return None
+        return self.bids_dict[self.bids_prices[-1]]
 
 class MatchingEngine:
     def __init__(self):
+        self.id_generator = IdGenerator()
         self.limit_order_book = LimitOrderBook()
 
     def print_book(self):
@@ -105,8 +131,34 @@ class MatchingEngine:
             print(f"{qty} @ {price} ({order_id})")
 
     def proccess_limit_order(self, side, price, qty):
-        order_id = self.limit_order_book.add_limit_order(side, price, qty)
+        order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ {price} {order_id}")
+
+        remaining_qty = qty
+
+        if side.lower() == "sell":
+            while remaining_qty > 0:
+                best_bid_list = self.limit_order_book.get_best_bid()
+                if best_bid_list is None or best_bid_list.head is None:
+                    break
+
+                resting_order = best_bid_list.head
+                if price > resting_order.price:
+                    break
+
+                traded_qty = min(remaining_qty, resting_order.qty)
+                trade_price = resting_order.price
+
+                remaining_qty -= traded_qty
+                resting_order.qty -= traded_qty
+
+                if resting_order.qty == 0:
+                    self.limit_order_book.remove_order(resting_order.order_id)
+
+                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+
+        if remaining_qty > 0:
+            self.limit_order_book.add_limit_order(order_id, side, price, remaining_qty)
 
 class CommandParser():
     def __init__(self):

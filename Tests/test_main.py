@@ -36,3 +36,13 @@ class Test_Book_Foundations(unittest.TestCase):
         self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
         self.assert_command("limit sell 20 50", "Order Created: sell 50 @ 20 id_2")
         self.assert_command("print book", "Buy Orders:\n100 @ 10 (id_1)\nSell Orders:\n50 @ 20 (id_2)")
+    
+    # Test if you can add a limit buy and a limit sell that directly match, 
+    # and if there is no remaining volume from either.
+    def test_add_one_limit_buy_and_one_limit_sell_that_match(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        
+        expected_output = "Order Created: sell 100 @ 10 id_2\nTrade, price: 10, qty: 100"
+        self.assert_command("limit sell 10 100", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
