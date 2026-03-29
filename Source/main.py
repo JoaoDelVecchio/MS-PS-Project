@@ -86,9 +86,15 @@ class LimitOrderBook:
             if price_list.head is None:
                 del self.bids_dict[order.price]
                 self.bids_prices.remove(order.price) 
+        elif order.side == 'sell':
+            price_list = self.asks_dict[order.price]
+            price_list.remove(order)
 
+            if price_list.head is None:
+                del self.asks_dict[order.price]
+                self.asks_prices.remove(order.price)
+                
         del self.orders_map[order_id]
-
 
     def get_all_positions(self):
         positions = {"buy": [], "sell": []}
@@ -109,6 +115,11 @@ class LimitOrderBook:
 
         return positions
 
+    def get_best_ask(self):
+        if not self.asks_prices:
+            return None
+        return self.asks_dict[self.asks_prices[0]]
+    
     def get_best_bid(self):
         if not self.bids_prices:
             return None
@@ -144,6 +155,26 @@ class MatchingEngine:
 
                 resting_order = best_bid_list.head
                 if price > resting_order.price:
+                    break
+
+                traded_qty = min(remaining_qty, resting_order.qty)
+                trade_price = resting_order.price
+
+                remaining_qty -= traded_qty
+                resting_order.qty -= traded_qty
+
+                if resting_order.qty == 0:
+                    self.limit_order_book.remove_order(resting_order.order_id)
+
+                print(f"Trade, price: {trade_price}, qty: {traded_qty}")   
+        elif side.lower() == "buy":
+            while remaining_qty > 0:
+                best_ask_list = self.limit_order_book.get_best_ask()
+                if best_ask_list is None or best_ask_list.head is None:
+                    break
+
+                resting_order = best_ask_list.head
+                if price < resting_order.price:
                     break
 
                 traded_qty = min(remaining_qty, resting_order.qty)
