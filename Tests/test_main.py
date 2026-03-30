@@ -301,3 +301,12 @@ class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("cancel id_1", "Order Cancelled: id_1")
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 10 (id_2)")
      
+     #Testa o cancelamento de uma ordem que já foi parcialmente executada
+    def test_partially_consumed_order(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        
+        expected_output = "Order Created: sell 40 @ market id_2\nTrade, price: 10, qty: 40"
+        self.assert_command("market sell 40", expected_output)
+        
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
