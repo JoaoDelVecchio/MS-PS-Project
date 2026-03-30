@@ -166,3 +166,32 @@ class Test_MatchingEngine(unittest.TestCase):
         self.assert_command("market buy 60", expected_output)
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
+
+    def test_add_limit_buys_and_one_market_sell_that_consume_one_level(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit buy 20 80", "Order Created: buy 80 @ 20 id_2")
+        
+        expected_output = "Order Created: sell 150 @ market id_3\nTrade, price: 20, qty: 80\nTrade, price: 10, qty: 70"
+        self.assert_command("market sell 150", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n30 @ 10 (id_1)\nSell Orders:")
+    
+    def test_add_limit_buys_and_one_market_sell_that_consume_two_levels(self):
+        self.assert_command("limit buy 20 20", "Order Created: buy 20 @ 20 id_1")
+        self.assert_command("limit buy 25 20", "Order Created: buy 20 @ 25 id_2")
+        
+        expected_output = "Order Created: sell 60 @ market id_3\nTrade, price: 25, qty: 20\nTrade, price: 20, qty: 20"
+        self.assert_command("market sell 60", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
+    def test_add_limit_buys_and_one_market_sell_that_partially_consume_three_levels(self):
+        self.assert_command("limit buy 20 20", "Order Created: buy 20 @ 20 id_1")
+        self.assert_command("limit buy 25 20", "Order Created: buy 20 @ 25 id_2")
+        self.assert_command("limit buy 15 80", "Order Created: buy 80 @ 15 id_3")
+        
+        expected_output = "Order Created: sell 110 @ market id_4\nTrade, price: 25, qty: 20\nTrade, price: 20, qty: 20\nTrade, price: 15, qty: 70"
+        self.assert_command("market sell 110", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n10 @ 15 (id_3)\nSell Orders:")
+    
