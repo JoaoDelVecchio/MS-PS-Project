@@ -559,3 +559,35 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
         expected_output= "Buy Orders:\nSell Orders:\n50 @ 10 (id_2)\n100 @ 10 (id_3)\n100 @ 20 (id_1)"
         self.assert_command("print book", expected_output)
     
+    def test_pegged_temporal_priority_fallback(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit buy 20 50", "Order Created: buy 50 @ 20 id_2")
+        self.assert_command("peg bid buy 50", "Order Created: buy 50 @ pegged id_3")
+        self.assert_command("limit buy 10 80", "Order Created: buy 80 @ 10 id_4")
+        self.assert_command("peg bid buy 18", "Order Created: buy 18 @ pegged id_5")
+        
+        self.assert_command("market sell 60", "Order Created: sell 60 @ market id_6\nTrade, price: 20, qty: 60")
+
+        expected_book = "Buy Orders:\n100 @ 10 (id_1)\n40 @ 10 (id_3)\n80 @ 10 (id_4)\n18 @ 10 (id_5)\nSell Orders:"
+        self.assert_command("print book", expected_book)
+
+    def test_market_sell_consumes_limit_and_pegged_at_same_price(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 40", "Order Created: buy 40 @ pegged id_2")
+        
+        self.assert_command("market sell 140", "Order Created: sell 140 @ market id_3\nTrade, price: 10, qty: 140")
+        
+        expected_book = "Buy Orders:\nSell Orders:"
+        self.assert_command("print book", expected_book)
+
+    def test_limit_crosses_spread_updates_pegs_and_maintains_priority(self):
+        self.assert_command("limit buy 20 150", "Order Created: buy 150 @ 20 id_1")
+        self.assert_command("peg bid buy 30", "Order Created: buy 30 @ pegged id_2")
+        self.assert_command("peg bid buy 20", "Order Created: buy 20 @ pegged id_3")
+        self.assert_command("limit sell 30 100", "Order Created: sell 100 @ 30 id_4")
+        
+        self.assert_command("limit buy 35 110", "Order Created: buy 110 @ 35 id_5\nTrade, price: 30, qty: 100")
+        
+        expected_book = "Buy Orders:\n30 @ 35 (id_2)\n20 @ 35 (id_3)\n10 @ 35 (id_5)\n150 @ 20 (id_1)\nSell Orders:"
+        self.assert_command("print book", expected_book)
+    

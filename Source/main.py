@@ -6,6 +6,28 @@ class OrderDoubleLinkedList:
         self.head = None
         self.tail = None
 
+    def insert_sorted(self, order):
+        if not self.head:
+            self.head = order
+            self.tail = order
+        else:
+            current = self.tail
+            while current is not None and current.seq_id > order.seq_id:
+                current = current.prev
+            
+            if current is None:
+                order.next = self.head
+                self.head.prev = order
+                self.head = order
+            else:
+                order.next = current.next
+                order.prev = current
+                if current.next:
+                    current.next.prev = order
+                else:
+                    self.tail = order
+                current.next = order
+
     def append(self, order):
         if not self.head:
             self.head = order
@@ -29,8 +51,11 @@ class OrderDoubleLinkedList:
 class Order:
     def __init__(self, order_id, side, qty):
         self.order_id = order_id
+        self.seq_id = 0
         self.side = side
         self.qty = qty
+        self.prev = None
+        self.next = None
 
 class LimitOrder(Order):
     def __init__(self, order_id, side, price, qty):
@@ -40,13 +65,10 @@ class LimitOrder(Order):
         self.next = None
 
 class PeggedOrder(Order):
-    def __init__(self, order_id, side, price, qty):
+    def __init__(self, order_id, side, peg_type, price, qty):
         super().__init__(order_id, side, qty)
-        
-        self.price = price 
-        
-        self.prev = None
-        self.next = None
+        self.price = price
+        self.peg_type = peg_type 
 
 class IdGenerator:
     def __init__(self):
@@ -63,65 +85,66 @@ class LimitOrderBook:
         self.asks_dict = {}
         self.bids_prices = []
         self.asks_prices = []
-        self.pegged_orders = {}
+        self.pegged_bids = {}
+        self.pegged_asks = {}
+        self.time_counter = 0
 
-    def get_order(self, order_id):
-        return self.orders_map.get(order_id)
-        return order_id in self.orders_map
+    def _insert_into_price_list(self, order):
+        if order.side.lower() == "buy":
+            if order.price not in self.bids_dict:
+                self.bids_dict[order.price] = OrderDoubleLinkedList()
+                bisect.insort(self.bids_prices, order.price)
 
-    def reduce_order_priority(self, order_id):
-        if order_id not in self.orders_map:
-            raise ValueError("Order not found")
+            self.bids_dict[order.price].insert_sorted(order)
+        else:
+            if order.price not in self.asks_dict:
+                self.asks_dict[order.price] = OrderDoubleLinkedList()
+                bisect.insort(self.asks_prices, order.price)
+
+            self.asks_dict[order.price].insert_sorted(order)
+
+    def update_pegged_orders(self, peg_type, new_price):
+        pegged_dict = self.pegged_bids if peg_type == 'bid' else self.pegged_asks
         
-        order = self.orders_map[order_id]
-        if order.side == 'buy':
-            price_list = self.bids_dict[order.price]
-            price_list.remove(order)
-            price_list.append(order)
-        elif order.side == 'sell':
-            price_list = self.asks_dict[order.price]
-            price_list.remove(order)
-            price_list.append(order)
-
+        for order in list(pegged_dict.values()):
+            if order.price != new_price:
+                if order.side.lower() == 'buy':
+                    price_list = self.bids_dict[order.price]
+                    price_list.remove(order)
+                    if price_list.head is None:
+                        del self.bids_dict[order.price]
+                        self.bids_prices.remove(order.price)
+                else:
+                    price_list = self.asks_dict[order.price]
+                    price_list.remove(order)
+                    if price_list.head is None:
+                        del self.asks_dict[order.price]
+                        self.asks_prices.remove(order.price)
+                
+                order.price = new_price
+                self._insert_into_price_list(order)
+    
     def add_limit_order(self, order_id, side, price, qty):
         order = LimitOrder(order_id, side, price, qty)
+
+        self.time_counter += 1
+        order.seq_id = self.time_counter
+
         self.orders_map[order_id] = order
-
-        if side.lower() == "buy":
-            if price not in self.bids_dict:
-                self.bids_dict[price] = OrderDoubleLinkedList()
-                bisect.insort(self.bids_prices, price)
-
-            self.bids_dict[price].append(order)
-        else:
-            if price not in self.asks_dict:
-                self.asks_dict[price] = OrderDoubleLinkedList()
-                bisect.insort(self.asks_prices, price)
-
-            self.asks_dict[price].append(order)
-        
-        return order_id
+        self._insert_into_price_list(order)
     
-    def add_pegged_order(self, order_id, side, price, qty):
-        order = PeggedOrder(order_id, side, price, qty)
-        
+    def add_pegged_order(self, order_id, side, peg_type, price, qty):
+        order = PeggedOrder(order_id, side, peg_type, price, qty)
+
+        self.time_counter += 1
+        order.seq_id = self.time_counter
+
         self.orders_map[order_id] = order
-        self.pegged_orders[order_id] = order
-
-        if side.lower() == "buy":
-            if price not in self.bids_dict:
-                self.bids_dict[price] = OrderDoubleLinkedList()
-                bisect.insort(self.bids_prices, price)
-
-            self.bids_dict[price].append(order)
+        if peg_type == "bid":
+            self.pegged_bids[order_id] = order
         else:
-            if price not in self.asks_dict:
-                self.asks_dict[price] = OrderDoubleLinkedList()
-                bisect.insort(self.asks_prices, price)
-
-            self.asks_dict[price].append(order)
-        
-        return order_id
+            self.pegged_asks[order_id] = order
+        self._insert_into_price_list(order)
 
     def remove_order(self, order_id):
         if order_id not in self.orders_map:
@@ -144,7 +167,12 @@ class LimitOrderBook:
                 self.asks_prices.remove(order.price)
 
         del self.orders_map[order_id]
+        self.pegged_bids.pop(order_id, None)
+        self.pegged_asks.pop(order_id, None)
 
+    def get_order(self, order_id):
+        return self.orders_map.get(order_id)
+    
     def get_all_positions(self):
         positions = {"buy": [], "sell": []}
 
@@ -174,10 +202,38 @@ class LimitOrderBook:
             return None
         return self.bids_dict[self.bids_prices[-1]]
 
+    def get_best_limit_bid_price(self):
+        for price in reversed(self.bids_prices):
+            current = self.bids_dict[price].head
+            while current:
+                if isinstance(current, LimitOrder):
+                    return price
+                current = current.next
+        return None
+
+    def get_best_limit_ask_price(self):
+        for price in self.asks_prices:
+            current = self.asks_dict[price].head
+            while current:
+                if isinstance(current, LimitOrder):
+                    return price
+                current = current.next
+        return None
+    
 class MatchingEngine:
     def __init__(self):
         self.id_generator = IdGenerator()
         self.limit_order_book = LimitOrderBook()
+
+    def _check_and_update_pegged(self, old_limit_bid, old_limit_ask):
+        new_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        new_limit_ask = self.limit_order_book.get_best_limit_ask_price()
+
+        if new_limit_bid is not None and new_limit_bid != old_limit_bid:
+            self.limit_order_book.update_pegged_orders('bid', new_limit_bid)
+            
+        if new_limit_ask is not None and new_limit_ask != old_limit_ask:
+            self.limit_order_book.update_pegged_orders('offer', new_limit_ask)
 
     def print_book(self):
         All_positions = self.limit_order_book.get_all_positions()
@@ -218,13 +274,19 @@ class MatchingEngine:
         self.proccess_limit_order(side, final_price, final_qty, order_id=order_id)
     
     def proccess_cancel_order(self, order_id):
+        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
         try:
             self.limit_order_book.remove_order(order_id)
             print(f"Order Cancelled: {order_id}")
+            self._check_and_update_pegged(old_limit_bid, old_limit_ask)
         except ValueError:
             print(f"Error: Order {order_id} not found")
     
     def proccess_limit_order(self, side, price, qty, order_id=None):
+        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
+
         if order_id is None:
             order_id = self.id_generator.generate_id()
             print(f"Order Created: {side} {qty} @ {price:g} {order_id}")    
@@ -279,7 +341,12 @@ class MatchingEngine:
         for price, traded_qty in trades.items():
             print(f"Trade, price: {price:g}, qty: {traded_qty}")
 
+        self._check_and_update_pegged(old_limit_bid, old_limit_ask)
+
     def proccess_market_order(self, side, qty):
+        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
+
         order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ market {order_id}")
 
@@ -325,28 +392,22 @@ class MatchingEngine:
         for price, traded_qty in trades.items():
             print(f"Trade, price: {price:g}, qty: {traded_qty}")
 
-    def proccess_pegged_order(self, side, qty):
-            if side == "buy":
-                best_list = self.limit_order_book.get_best_bid()
-            elif side == "sell":
-                best_list = self.limit_order_book.get_best_ask()
-            else:
-                print("Error")
-                return
-            
-            if best_list is None or best_list.head is None:
-                print("Error")
-                return
+        self._check_and_update_pegged(old_limit_bid, old_limit_ask)
 
-            reference_price = best_list.head.price
-            order_id = self.id_generator.generate_id()
-            
-            print(f"Order Created: {side} {qty} @ pegged {order_id}")
-
-            self.limit_order_book.add_pegged_order(order_id, side, reference_price, qty)
-
+    def proccess_pegged_order(self, peg_type, side, qty):
+        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
         
+        price = old_limit_bid if peg_type == "bid" else old_limit_ask
+            
+        if price is None:
+            print("Error")
+            return
 
+        order_id = self.id_generator.generate_id()
+        print(f"Order Created: {side} {qty} @ pegged {order_id}")
+        self.limit_order_book.add_pegged_order(order_id, side, peg_type, price, qty)
+        
 class CommandParser:
     def __init__(self):
         self.matching_engine = MatchingEngine()
@@ -366,8 +427,8 @@ class CommandParser:
             self.matching_engine.proccess_market_order(side, int(qty))
         
         elif command.startswith("peg"):
-            _, _, side, qty = command.split()
-            self.matching_engine.proccess_pegged_order(side, int(qty))
+            _, peg_type, side, qty = command.split()
+            self.matching_engine.proccess_pegged_order(peg_type, side, int(qty))
 
         elif command.startswith("cancel"):
             _, order_id = command.split()
