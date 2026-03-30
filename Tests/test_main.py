@@ -90,5 +90,13 @@ class Test_MatchingEngine(unittest.TestCase):
         self.assert_command("limit buy 10 100", expected_output)
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
+
+    def test_add_one_limit_sell_and_one_market_buy_that_match(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        
+        expected_output = "Order Created: buy 50 @ market id_2\nTrade, price: 10, qty: 50"
+        self.assert_command("market buy 50", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 10 (id_1)")
     
 

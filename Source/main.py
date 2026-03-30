@@ -93,7 +93,7 @@ class LimitOrderBook:
             if price_list.head is None:
                 del self.asks_dict[order.price]
                 self.asks_prices.remove(order.price)
-                
+
         del self.orders_map[order_id]
 
     def get_all_positions(self):
@@ -191,6 +191,49 @@ class MatchingEngine:
         if remaining_qty > 0:
             self.limit_order_book.add_limit_order(order_id, side, price, remaining_qty)
 
+    def proccess_market_order(self, side, qty):
+        order_id = self.id_generator.generate_id()
+        print(f"Order Created: {side} {qty} @ market {order_id}")
+
+        remaining_qty = qty
+
+        if side.lower() == "sell":
+            while remaining_qty > 0:
+                best_bid_list = self.limit_order_book.get_best_bid()
+                if best_bid_list is None or best_bid_list.head is None:
+                    break
+
+                resting_order = best_bid_list.head
+                trade_price = resting_order.price
+
+                traded_qty = min(remaining_qty, resting_order.qty)
+
+                remaining_qty -= traded_qty
+                resting_order.qty -= traded_qty
+
+                if resting_order.qty == 0:
+                    self.limit_order_book.remove_order(resting_order.order_id)
+
+                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+        elif side.lower() == "buy":
+            while remaining_qty > 0:
+                best_ask_list = self.limit_order_book.get_best_ask()
+                if best_ask_list is None or best_ask_list.head is None:
+                    break
+
+                resting_order = best_ask_list.head
+                trade_price = resting_order.price
+
+                traded_qty = min(remaining_qty, resting_order.qty)
+
+                remaining_qty -= traded_qty
+                resting_order.qty -= traded_qty
+
+                if resting_order.qty == 0:
+                    self.limit_order_book.remove_order(resting_order.order_id)
+
+                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+
 class CommandParser():
     def __init__(self):
         self.matching_engine = MatchingEngine()
@@ -204,6 +247,10 @@ class CommandParser():
         if command.startswith("limit"):
             _, side, price, qty = command.split()
             self.matching_engine.proccess_limit_order(side, int(price), int(qty))
+
+        if command.startswith("market"):
+            _, side, qty = command.split()
+            self.matching_engine.proccess_market_order(side, int(qty))
 
             
 
