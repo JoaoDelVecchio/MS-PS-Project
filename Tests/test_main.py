@@ -90,6 +90,14 @@ class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
         self.assert_command("limit buy 10 100", expected_output)
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
+    def test_add_one_limit_buy_and_one_limit_sell_that_partially_match(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        
+        expected_output = "Order Created: sell 10 @ 10 id_2\nTrade, price: 10, qty: 10"
+        self.assert_command("limit sell 10 10", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n90 @ 10 (id_1)\nSell Orders:")
 
     def test_add_one_limit_sell_and_one_market_buy_that_match(self):
         self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
@@ -490,5 +498,4 @@ class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("modify id_3 price 15 qty 120", expected_output)
 
         self.assert_command("print book", "Buy Orders:\n30 @ 20 (id_1)\nSell Orders:")
-    
     
