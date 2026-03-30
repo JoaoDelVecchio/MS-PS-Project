@@ -459,3 +459,36 @@ class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("modify id_2 price 5", expected_output)
 
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n100 @ 5 (id_2)")
+    
+    def test_modify_buy_order_increase_price_to_cross_spread_and_consume_multiple_levels(self):
+        self.assert_command("limit sell 20 50", "Order Created: sell 50 @ 20 id_1")
+        self.assert_command("limit sell 25 50", "Order Created: sell 50 @ 25 id_2")
+        self.assert_command("limit buy 10 150", "Order Created: buy 150 @ 10 id_3")
+        
+        expected_output = "Order Modified\nTrade, price: 20, qty: 50\nTrade, price: 25, qty: 50"
+        self.assert_command("modify id_3 price 30", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\n50 @ 30 (id_3)\nSell Orders:")
+    
+    def test_modify_sell_order_reduce_price_to_cross_spread_and_consume_multiple_levels(self):
+        self.assert_command("limit buy 20 50", "Order Created: buy 50 @ 20 id_1")
+        self.assert_command("limit buy 25 50", "Order Created: buy 50 @ 25 id_2")
+        self.assert_command("limit sell 30 150", "Order Created: sell 150 @ 30 id_3")
+        
+        expected_output = "Order Modified\nTrade, price: 25, qty: 50\nTrade, price: 20, qty: 50"
+        self.assert_command("modify id_3 price 15", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 15 (id_3)")
+    
+    def test_modify_sell_order_to_cross_spread_and_being_tottaly_consumed(self):
+        self.assert_command("limit buy 20 50", "Order Created: buy 50 @ 20 id_1")
+        self.assert_command("limit buy 25 50", "Order Created: buy 50 @ 25 id_2")
+        self.assert_command("limit sell 30 150", "Order Created: sell 150 @ 30 id_3")
+        self.assert_command("limit buy 25 50", "Order Created: buy 50 @ 25 id_4")
+        
+        expected_output = "Order Modified\nTrade, price: 25, qty: 100\nTrade, price: 20, qty: 20"
+        self.assert_command("modify id_3 price 15 qty 120", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\n30 @ 20 (id_1)\nSell Orders:")
+    
+    
