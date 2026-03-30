@@ -219,7 +219,20 @@ class LimitOrderBook:
                     return price
                 current = current.next
         return None
-    
+
+class BookPrinter:
+    @staticmethod
+    def print_book(limit_order_book):
+        positions = limit_order_book.get_all_positions()
+
+        print("Buy Orders:")
+        for qty, price, order_id in positions["buy"]:
+            print(f"{qty} @ {price:g} ({order_id})")
+
+        print("Sell Orders:")
+        for qty, price, order_id in positions["sell"]:
+            print(f"{qty} @ {price:g} ({order_id})")
+
 class MatchingEngine:
     def __init__(self):
         self.id_generator = IdGenerator()
@@ -234,17 +247,6 @@ class MatchingEngine:
             
         if new_limit_ask is not None and new_limit_ask != old_limit_ask:
             self.limit_order_book.update_pegged_orders('offer', new_limit_ask)
-
-    def print_book(self):
-        All_positions = self.limit_order_book.get_all_positions()
-
-        print("Buy Orders:")
-        for qty, price, order_id in All_positions["buy"]:
-            print(f"{qty} @ {price:g} ({order_id})")
-
-        print("Sell Orders:")
-        for qty, price, order_id in All_positions["sell"]:
-            print(f"{qty} @ {price:g} ({order_id})")
 
     def proccess_modify_order(self, order_id, new_price=None, new_qty=None):
         old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
@@ -445,7 +447,7 @@ class CommandParser:
             print("Error: Invalid command")
 
     def _parse_print_book(self):
-        self.matching_engine.print_book()
+        BookPrinter.print_book(self.matching_engine.limit_order_book)
 
     def _parse_limit(self, parts):
         if len(parts) != 4:
