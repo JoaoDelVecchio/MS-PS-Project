@@ -498,4 +498,22 @@ class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("modify id_3 price 15 qty 120", expected_output)
 
         self.assert_command("print book", "Buy Orders:\n30 @ 20 (id_1)\nSell Orders:")
-    
+
+class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
+    def setUp(self):
+        self.parser = CommandParser()
+        
+        self.patcher = patch('sys.stdout', new_callable=io.StringIO)
+        self.mock_stdout = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def assert_command(self, command: str, expected_output: str):
+        self.parser.process(command)
+        output = self.mock_stdout.getvalue().strip()
+
+        self.assertEqual(output, expected_output)
+        
+        self.mock_stdout.seek(0)
+        self.mock_stdout.truncate(0)
