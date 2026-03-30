@@ -11,4 +11,6 @@ Quantidades fracionarias sao permitidas? Ou temos um tick size de 1?
 
 O que ocorre ao adicionar pegged order em um lado vazio? (E ja adiantando, essas questoes sao a criterio para eu escolher ou nao?)
 
-Eu devo agregar quanto foi o trade total no caso de varios trades no memso nivel?
+Eu devo agregar quanto foi o trade total no caso de varios trades no memso nivel? SIM!
+
+Tudo bem se depois do input de market order ter um Order created 10 @ Market ??

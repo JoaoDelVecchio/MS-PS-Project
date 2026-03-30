@@ -235,6 +235,22 @@ class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n30 @ 10 (id_2)\n50 @ 10 (id_3)")
     
+    def test_the_sequence_of_the_statement(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_2")
+        self.assert_command("limit sell 20 200", "Order Created: sell 200 @ 20 id_3")
+        
+        expected_output = "Order Created: buy 150 @ market id_4\nTrade, price: 20, qty: 150"
+        self.assert_command("market buy 150", expected_output)
+        
+        expected_output = "Order Created: buy 200 @ market id_5\nTrade, price: 20, qty: 150"
+        self.assert_command("market buy 200", expected_output)
+        
+        expected_output = "Order Created: sell 200 @ market id_6\nTrade, price: 10, qty: 100"
+        self.assert_command("market sell 200", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
 class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
     def setUp(self):
         self.parser = CommandParser()
