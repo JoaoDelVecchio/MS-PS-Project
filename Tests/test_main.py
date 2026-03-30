@@ -301,7 +301,6 @@ class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("cancel id_1", "Order Cancelled: id_1")
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 10 (id_2)")
      
-     #Testa o cancelamento de uma ordem que já foi parcialmente executada
     def test_partially_consumed_order(self):
         self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
         
@@ -311,6 +310,65 @@ class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("cancel id_1", "Order Cancelled: id_1")
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
 
-    # testa Erro ao tentar cancelar ordem inexistente.
     def test_cancel_non_existent_order(self):
         self.assert_command("cancel id_999", "Error: Order id_999 not found")
+
+    def test_modify_buy_order_reduce_qty(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("modify id_1 qty 50", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\n50 @ 10 (id_1)\nSell Orders:")
+    
+    def test_modify_buy_order_reduce_qty_and_market_sell(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_2")
+        self.assert_command("modify id_1 qty 50", "Order Modified")
+        
+        expected_output = "Order Created: sell 60 @ market id_3\nTrade, price: 10, qty: 60"
+        self.assert_command("market sell 60", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n40 @ 10 (id_2)\nSell Orders:")
+    
+    def test_modify_sell_order_reduce_qty(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("modify id_1 qty 50", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 10 (id_1)")
+    
+    def test_modify_sell_order_reduce_qty_and_market_buy(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
+        self.assert_command("modify id_1 qty 50", "Order Modified")
+        
+        expected_output = "Order Created: buy 60 @ market id_3\nTrade, price: 10, qty: 60"
+        self.assert_command("market buy 60", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n40 @ 10 (id_2)")
+    
+    def test_modify_buy_order_increase_qty(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("modify id_1 qty 150", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\n150 @ 10 (id_1)\nSell Orders:")
+    
+    def test_modify_sell_order_increase_qty(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("modify id_1 qty 150", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n150 @ 10 (id_1)")
+    
+    def test_modify_buy_order_increase_price(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("modify id_1 price 20", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\n100 @ 20 (id_1)\nSell Orders:")
+    
+    def test_modify_sell_order_increase_price(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("modify id_1 price 20", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n100 @ 20 (id_1)")
+
+    def test_modify_buy_order_reduce_price(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("modify id_1 price 5", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\n100 @ 5 (id_1)\nSell Orders:")
+    
+    def test_modify_sell_order_reduce_price(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("modify id_1 price 5", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n100 @ 5 (id_1)")

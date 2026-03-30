@@ -55,6 +55,24 @@ class LimitOrderBook:
         self.bids_prices = []
         self.asks_prices = []
 
+    def get_order(self, order_id):
+        return self.orders_map.get(order_id)
+        return order_id in self.orders_map
+
+    def reduce_order_priority(self, order_id):
+        if order_id not in self.orders_map:
+            raise ValueError("Order not found")
+        
+        order = self.orders_map[order_id]
+        if order.side == 'buy':
+            price_list = self.bids_dict[order.price]
+            price_list.remove(order)
+            price_list.append(order)
+        elif order.side == 'sell':
+            price_list = self.asks_dict[order.price]
+            price_list.remove(order)
+            price_list.append(order)
+
     def add_limit_order(self, order_id, side, price, qty):
         order = LimitOrder(order_id, side, price, qty)
         self.orders_map[order_id] = order
@@ -135,12 +153,42 @@ class MatchingEngine:
 
         print("Buy Orders:")
         for qty, price, order_id in All_positions["buy"]:
-            print(f"{qty} @ {price} ({order_id})")
+            print(f"{qty} @ {price:g} ({order_id})")
 
         print("Sell Orders:")
         for qty, price, order_id in All_positions["sell"]:
-            print(f"{qty} @ {price} ({order_id})")
+            print(f"{qty} @ {price:g} ({order_id})")
 
+    def proccess_modify_order(self, order_id, new_price=None, new_qty=None):
+        order = self.limit_order_book.get_order(order_id)
+        if not order:
+            print("Error") 
+            return
+        
+        if new_qty is not None and new_qty <= 0:
+            print("Error")
+            return
+
+        price_changed = (new_price is not None and new_price != order.price)
+        qty_decreased = (new_qty is not None and new_qty < order.qty)
+        qty_increased = (new_qty is not None and new_qty > order.qty)
+
+        if not price_changed and not qty_increased and qty_decreased:
+            order.qty = new_qty
+            print("Order Modified")
+            return
+
+        side = order.side
+        final_price = new_price if new_price is not None else order.price
+        final_qty = new_qty if new_qty is not None else order.qty
+
+        self.limit_order_book.remove_order(order_id)
+        self.proccess_limit_order(side, final_price, final_qty, order_id=order_id)
+
+        print("Order Modified")
+        
+
+    
     def proccess_cancel_order(self, order_id):
         try:
             self.limit_order_book.remove_order(order_id)
@@ -148,9 +196,10 @@ class MatchingEngine:
         except ValueError:
             print(f"Error: Order {order_id} not found")
     
-    def proccess_limit_order(self, side, price, qty):
-        order_id = self.id_generator.generate_id()
-        print(f"Order Created: {side} {qty} @ {price} {order_id}")
+    def proccess_limit_order(self, side, price, qty, order_id=None):
+        if order_id is None:
+            order_id = self.id_generator.generate_id()
+            print(f"Order Created: {side} {qty} @ {price:g} {order_id}")    
 
         remaining_qty = qty
         trades = {}
@@ -200,7 +249,7 @@ class MatchingEngine:
             self.limit_order_book.add_limit_order(order_id, side, price, remaining_qty)
         
         for price, traded_qty in trades.items():
-            print(f"Trade, price: {price}, qty: {traded_qty}")
+            print(f"Trade, price: {price:g}, qty: {traded_qty}")
 
     def proccess_market_order(self, side, qty):
         order_id = self.id_generator.generate_id()
@@ -246,7 +295,7 @@ class MatchingEngine:
                 trades[trade_price] = trades.get(trade_price, 0) + traded_qty
 
         for price, traded_qty in trades.items():
-            print(f"Trade, price: {price}, qty: {traded_qty}")
+            print(f"Trade, price: {price:g}, qty: {traded_qty}")
 
 class CommandParser():
     def __init__(self):
@@ -260,16 +309,41 @@ class CommandParser():
 
         if command.startswith("limit"):
             _, side, price, qty = command.split()
-            self.matching_engine.proccess_limit_order(side, int(price), int(qty))
+            self.matching_engine.proccess_limit_order(side, float(price), int(qty))
 
-        if command.startswith("market"):
+        elif command.startswith("market"):
             _, side, qty = command.split()
             self.matching_engine.proccess_market_order(side, int(qty))
         
-        if command.startswith("cancel"):
+        elif command.startswith("cancel"):
             _, order_id = command.split()
             self.matching_engine.proccess_cancel_order(order_id)
-            
+        
+        elif command.startswith("modify"):
+            splitted = command.split()
+            if len(splitted) < 4 or len(splitted) % 2 != 0:
+                print("Error")
+                return
+
+            order_id = splitted[1]
+            new_qty = None
+            new_price = None
+            try:
+                for i in range(2, len(splitted), 2):
+                    chave = splitted[i]
+                    valor = splitted[i+1]
+
+                    if chave == "qty":
+                        new_qty = int(valor)
+                    elif chave == "price":
+                        new_price = float(valor) 
+                    else:
+                        print("Error")
+                        return
+                    
+                self.matching_engine.proccess_modify_order(order_id, new_price, new_qty)
+            except ValueError:
+                print("Error")
 
 def main():
     print("Matching Engine started. Type 'exit' or 'quit' to stop.")

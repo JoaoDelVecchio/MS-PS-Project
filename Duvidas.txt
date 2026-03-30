@@ -14,3 +14,5 @@ O que ocorre ao adicionar pegged order em um lado vazio? (E ja adiantando, essas
 Eu devo agregar quanto foi o trade total no caso de varios trades no memso nivel? SIM!
 
 Tudo bem se depois do input de market order ter um Order created 10 @ Market ??
+
+Como fica a prioridade do tempo quando eu modifico alguma posição?
