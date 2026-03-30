@@ -16,3 +16,5 @@ Eu devo agregar quanto foi o trade total no caso de varios trades no memso nivel
 Tudo bem se depois do input de market order ter um Order created 10 @ Market ??
 
 Como fica a prioridade do tempo quando eu modifico alguma posição?
+
+O que ocorre com uma pegged offer quando o book esvazia e sobra apenas ela?

@@ -249,7 +249,7 @@ Teste 58 e 59: Peg Bid e Offer piorando de preço após modify da Limit oposta.
 
 Teste 56 e 57: Pegs atualizando quando a limit de referência é CANCELADA.
 
-Teste 61: Pegged Order quando o livro esvazia (Mantém o último preço).
+Teste 61: Pegged Order quando o livro esvazia.
 
 Teste 41: Cancelamento de Pegged.
 

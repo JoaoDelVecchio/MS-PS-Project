@@ -591,3 +591,44 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
         expected_book = "Buy Orders:\n30 @ 35 (id_2)\n20 @ 35 (id_3)\n10 @ 35 (id_5)\n150 @ 20 (id_1)\nSell Orders:"
         self.assert_command("print book", expected_book)
     
+    def test_limit_crosses_spread_updates_pegs_to_offer(self):
+        self.assert_command("limit sell 15 100", "Order Created: sell 100 @ 15 id_1")
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_2")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_3")
+
+        expected_output = "Order Created: buy 120 @ market id_4\nTrade, price: 15, qty: 120"
+        self.assert_command("market buy 120", expected_output)
+        
+        expected_book = "Buy Orders:\nSell Orders:\n100 @ 20 (id_2)\n30 @ 20 (id_3)"
+        self.assert_command("print book", expected_book)
+    
+    # testa o cancelamento de uma ordem pegged e o impacto disso no livro de ordens
+    def test_cancel_pegged_order(self):
+        self.assert_command("limit sell 15 100", "Order Created: sell 100 @ 15 id_1")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
+        
+        self.assert_command("cancel id_2", "Order Cancelled: id_2")
+
+        expected_book = "Buy Orders:\nSell Orders:\n100 @ 15 (id_1)"
+        self.assert_command("print book", expected_book)
+
+    def test_modify_pegged_order_decrease_qty(self):
+        self.assert_command("limit sell 15 100", "Order Created: sell 100 @ 15 id_1")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
+        self.assert_command("limit sell 15 120", "Order Created: sell 120 @ 15 id_3")
+        
+        self.assert_command("modify id_2 qty 30", "Order Modified")
+
+        expected_book = "Buy Orders:\nSell Orders:\n100 @ 15 (id_1)\n30 @ 15 (id_2)\n120 @ 15 (id_3)"
+        self.assert_command("print book", expected_book)
+
+    def test_modify_pegged_order_increase_qty(self):
+        self.assert_command("limit sell 15 100", "Order Created: sell 100 @ 15 id_1")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
+        self.assert_command("limit sell 15 120", "Order Created: sell 120 @ 15 id_3")
+
+        self.assert_command("modify id_2 qty 70", "Order Modified")
+
+        expected_book = "Buy Orders:\nSell Orders:\n100 @ 15 (id_1)\n120 @ 15 (id_3)\n70 @ 15 (id_2)"
+        self.assert_command("print book", expected_book)
+    
