@@ -14,6 +14,7 @@ class OrderDoubleLinkedList:
             self.tail.next = order
             order.prev = self.tail
             self.tail = order
+    
     def remove(self, order):
         if order.prev:
             order.prev.next = order.next
@@ -31,7 +32,6 @@ class Order:
         self.side = side
         self.qty = qty
 
-# Create class Limit order that inherit Order and has price as attribute
 class LimitOrder(Order):
     def __init__(self, order_id, side, price, qty):
         super().__init__(order_id, side, qty)
@@ -251,7 +251,6 @@ class CommandParser():
         if command.startswith("market"):
             _, side, qty = command.split()
             self.matching_engine.proccess_market_order(side, int(qty))
-
             
 
 def main():
