@@ -182,12 +182,9 @@ class MatchingEngine:
         final_price = new_price if new_price is not None else order.price
         final_qty = new_qty if new_qty is not None else order.qty
 
+        print("Order Modified")
         self.limit_order_book.remove_order(order_id)
         self.proccess_limit_order(side, final_price, final_qty, order_id=order_id)
-
-        print("Order Modified")
-        
-
     
     def proccess_cancel_order(self, order_id):
         try:

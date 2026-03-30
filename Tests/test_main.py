@@ -260,7 +260,7 @@ class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
     
-class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
+class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
     def setUp(self):
         self.parser = CommandParser()
         
@@ -421,3 +421,41 @@ class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("modify id_2 price 10", expected_output)
 
         self.assert_command("print book", "Buy Orders:\n50 @ 10 (id_1)\n50 @ 10 (id_2)\nSell Orders:")
+
+        self.assert_command("modify id_1 price 20", expected_output)
+    
+    def test_modify_buy_order_increase_price_to_cross_spread(self):
+        self.assert_command("limit sell 20 50", "Order Created: sell 50 @ 20 id_1")
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_2")
+        
+        expected_output = "Order Modified\nTrade, price: 20, qty: 50"
+        self.assert_command("modify id_2 price 25", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
+    def test_modify_sell_order_reduce_price_to_cross_spread(self):
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_1")
+        self.assert_command("limit sell 20 50", "Order Created: sell 50 @ 20 id_2")
+        
+        expected_output = "Order Modified\nTrade, price: 10, qty: 50"
+        self.assert_command("modify id_2 price 5", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
+    def test_modify_buy_order_increase_price_to_cross_spread_and_partially_execute(self):
+        self.assert_command("limit sell 20 50", "Order Created: sell 50 @ 20 id_1")
+        self.assert_command("limit buy 10 150", "Order Created: buy 150 @ 10 id_2")
+        
+        expected_output = "Order Modified\nTrade, price: 20, qty: 50"
+        self.assert_command("modify id_2 price 25", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\n100 @ 25 (id_2)\nSell Orders:")
+    
+    def test_modify_sell_order_reduce_price_to_cross_spread_and_partially_execute(self):
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_1")
+        self.assert_command("limit sell 20 150", "Order Created: sell 150 @ 20 id_2")
+        
+        expected_output = "Order Modified\nTrade, price: 10, qty: 50"
+        self.assert_command("modify id_2 price 5", expected_output)
+
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n100 @ 5 (id_2)")
