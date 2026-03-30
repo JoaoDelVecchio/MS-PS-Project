@@ -74,7 +74,10 @@ class LimitOrderBook:
         
         return order_id
     
-    def remove_order(self, order_id):        
+    def remove_order(self, order_id):
+        if order_id not in self.orders_map:
+            raise ValueError("Order not found")
+                
         order = self.orders_map[order_id]
         if order.side == 'buy':
             price_list = self.bids_dict[order.price]
@@ -139,8 +142,11 @@ class MatchingEngine:
             print(f"{qty} @ {price} ({order_id})")
 
     def proccess_cancel_order(self, order_id):
-        self.limit_order_book.remove_order(order_id)
-        print(f"Order Cancelled: {order_id}")
+        try:
+            self.limit_order_book.remove_order(order_id)
+            print(f"Order Cancelled: {order_id}")
+        except ValueError:
+            print(f"Error: Order {order_id} not found")
     
     def proccess_limit_order(self, side, price, qty):
         order_id = self.id_generator.generate_id()

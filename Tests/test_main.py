@@ -310,3 +310,7 @@ class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         
         self.assert_command("cancel id_1", "Order Cancelled: id_1")
         self.assert_command("print book", "Buy Orders:\nSell Orders:")
+
+    # testa Erro ao tentar cancelar ordem inexistente.
+    def test_cancel_non_existent_order(self):
+        self.assert_command("cancel id_999", "Error: Order id_999 not found")
