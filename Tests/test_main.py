@@ -56,7 +56,7 @@ class Test_Book_Foundations(unittest.TestCase):
         self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n100 @ 10 (id_1)\n50 @ 10 (id_2)")
 
-class Test_MatchingEngine(unittest.TestCase):
+class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
     def setUp(self):
         self.parser = CommandParser()
         
@@ -215,3 +215,64 @@ class Test_MatchingEngine(unittest.TestCase):
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n70 @ 15 (id_3)\n20 @ 20 (id_1)\n20 @ 25 (id_2)")
     
+    def test_add_limit_buys_and_one_market_sell_that_partially_consume_two_levels_with_time_priority(self):
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_1")
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_2")
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_3")
+        
+        expected_output = "Order Created: sell 70 @ market id_4\nTrade, price: 10, qty: 50\nTrade, price: 10, qty: 20"
+        self.assert_command("market sell 70", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n30 @ 10 (id_2)\n50 @ 10 (id_3)\nSell Orders:")
+    
+    def test_add_limit_sells_and_one_market_buy_that_partially_consume_two_levels_with_time_priority(self):
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_1")
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_3")
+        
+        expected_output = "Order Created: buy 70 @ market id_4\nTrade, price: 10, qty: 50\nTrade, price: 10, qty: 20"
+        self.assert_command("market buy 70", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n30 @ 10 (id_2)\n50 @ 10 (id_3)")
+    
+class test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
+    def setUp(self):
+        self.parser = CommandParser()
+        
+        self.patcher = patch('sys.stdout', new_callable=io.StringIO)
+        self.mock_stdout = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def assert_command(self, command: str, expected_output: str):
+        self.parser.process(command)
+        output = self.mock_stdout.getvalue().strip()
+
+        self.assertEqual(output, expected_output)
+        
+        self.mock_stdout.seek(0)
+        self.mock_stdout.truncate(0)
+    
+    def test_add_one_limit_buy_and_cancel_it(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+    
+    def test_add_one_limit_sell_and_cancel_it(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:")
+
+    def test_add_two_limit_buy_and_cancel_one(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_2")
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        self.assert_command("print book", "Buy Orders:\n50 @ 10 (id_2)\nSell Orders:")
+    
+    def test_add_two_limit_sell_and_cancel_one(self):
+        self.assert_command("limit sell 10 100", "Order Created: sell 100 @ 10 id_1")
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n50 @ 10 (id_2)")
+     

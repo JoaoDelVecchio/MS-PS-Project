@@ -74,10 +74,7 @@ class LimitOrderBook:
         
         return order_id
     
-    def remove_order(self, order_id):
-        if order_id not in self.orders_map:
-            return
-        
+    def remove_order(self, order_id):        
         order = self.orders_map[order_id]
         if order.side == 'buy':
             price_list = self.bids_dict[order.price]
@@ -141,6 +138,10 @@ class MatchingEngine:
         for qty, price, order_id in All_positions["sell"]:
             print(f"{qty} @ {price} ({order_id})")
 
+    def proccess_cancel_order(self, order_id):
+        self.limit_order_book.remove_order(order_id)
+        print(f"Order Cancelled: {order_id}")
+    
     def proccess_limit_order(self, side, price, qty):
         order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ {price} {order_id}")
@@ -251,6 +252,10 @@ class CommandParser():
         if command.startswith("market"):
             _, side, qty = command.split()
             self.matching_engine.proccess_market_order(side, int(qty))
+        
+        if command.startswith("cancel"):
+            _, order_id = command.split()
+            self.matching_engine.proccess_cancel_order(order_id)
             
 
 def main():
