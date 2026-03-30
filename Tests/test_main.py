@@ -498,6 +498,15 @@ class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
         self.assert_command("modify id_3 price 15 qty 120", expected_output)
 
         self.assert_command("print book", "Buy Orders:\n30 @ 20 (id_1)\nSell Orders:")
+    
+    def test_modify_from_statement(self):
+        self.assert_command("limit buy 10 200", "Order Created: buy 200 @ 10 id_1")
+        self.assert_command("limit buy 9.99 100", "Order Created: buy 100 @ 9.99 id_2")
+        self.assert_command("limit sell 10.5 100", "Order Created: sell 100 @ 10.5 id_3")
+
+
+        self.assert_command("modify id_1 price 9.98", "Order Modified")
+        self.assert_command("print book", "Buy Orders:\n100 @ 9.99 (id_2)\n200 @ 9.98 (id_1)\nSell Orders:\n100 @ 10.5 (id_3)")
 
 class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
     def setUp(self):
@@ -517,3 +526,25 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
         
         self.mock_stdout.seek(0)
         self.mock_stdout.truncate(0)
+
+    def test_add_pegged_buy_order(self):
+        self.assert_command("limit buy 10 200", "Order Created: buy 200 @ 10 id_1")
+        self.assert_command("limit buy 9.99 100", "Order Created: buy 100 @ 9.99 id_2")
+        self.assert_command("limit sell 10.5 100", "Order Created: sell 100 @ 10.5 id_3")
+        
+        expected_output = "Order Created: buy 150 @ pegged id_4"
+        self.assert_command("peg bid buy 150", expected_output)
+
+        expected_output= "Buy Orders:\n200 @ 10 (id_1)\n150 @ 10 (id_4)\n100 @ 9.99 (id_2)\nSell Orders:\n100 @ 10.5 (id_3)"
+        self.assert_command("print book", expected_output)
+
+    def test_add_pegged_sell_order(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("limit sell 10.5 200", "Order Created: sell 200 @ 10.5 id_2")
+        self.assert_command("limit sell 10.6 100", "Order Created: sell 100 @ 10.6 id_3")
+        
+        expected_output = "Order Created: sell 150 @ pegged id_4"
+        self.assert_command("peg offer sell 150", expected_output)
+
+        expected_output= "Buy Orders:\n100 @ 10 (id_1)\nSell Orders:\n200 @ 10.5 (id_2)\n150 @ 10.5 (id_4)\n100 @ 10.6 (id_3)"
+        self.assert_command("print book", expected_output)

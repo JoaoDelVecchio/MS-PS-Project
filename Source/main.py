@@ -39,6 +39,15 @@ class LimitOrder(Order):
         self.prev = None
         self.next = None
 
+class PeggedOrder(Order):
+    def __init__(self, order_id, side, price, qty):
+        super().__init__(order_id, side, qty)
+        
+        self.price = price 
+        
+        self.prev = None
+        self.next = None
+
 class IdGenerator:
     def __init__(self):
         self.current_id = 0
@@ -54,6 +63,7 @@ class LimitOrderBook:
         self.asks_dict = {}
         self.bids_prices = []
         self.asks_prices = []
+        self.pegged_orders = {}
 
     def get_order(self, order_id):
         return self.orders_map.get(order_id)
@@ -92,6 +102,27 @@ class LimitOrderBook:
         
         return order_id
     
+    def add_pegged_order(self, order_id, side, price, qty):
+        order = PeggedOrder(order_id, side, price, qty)
+        
+        self.orders_map[order_id] = order
+        self.pegged_orders[order_id] = order
+
+        if side.lower() == "buy":
+            if price not in self.bids_dict:
+                self.bids_dict[price] = OrderDoubleLinkedList()
+                bisect.insort(self.bids_prices, price)
+
+            self.bids_dict[price].append(order)
+        else:
+            if price not in self.asks_dict:
+                self.asks_dict[price] = OrderDoubleLinkedList()
+                bisect.insort(self.asks_prices, price)
+
+            self.asks_dict[price].append(order)
+        
+        return order_id
+
     def remove_order(self, order_id):
         if order_id not in self.orders_map:
             raise ValueError("Order not found")
@@ -294,7 +325,29 @@ class MatchingEngine:
         for price, traded_qty in trades.items():
             print(f"Trade, price: {price:g}, qty: {traded_qty}")
 
-class CommandParser():
+    def proccess_pegged_order(self, side, qty):
+            if side == "buy":
+                best_list = self.limit_order_book.get_best_bid()
+            elif side == "sell":
+                best_list = self.limit_order_book.get_best_ask()
+            else:
+                print("Error")
+                return
+            
+            if best_list is None or best_list.head is None:
+                print("Error")
+                return
+
+            reference_price = best_list.head.price
+            order_id = self.id_generator.generate_id()
+            
+            print(f"Order Created: {side} {qty} @ pegged {order_id}")
+
+            self.limit_order_book.add_pegged_order(order_id, side, reference_price, qty)
+
+        
+
+class CommandParser:
     def __init__(self):
         self.matching_engine = MatchingEngine()
 
@@ -312,6 +365,10 @@ class CommandParser():
             _, side, qty = command.split()
             self.matching_engine.proccess_market_order(side, int(qty))
         
+        elif command.startswith("peg"):
+            _, _, side, qty = command.split()
+            self.matching_engine.proccess_pegged_order(side, int(qty))
+
         elif command.startswith("cancel"):
             _, order_id = command.split()
             self.matching_engine.proccess_cancel_order(order_id)
