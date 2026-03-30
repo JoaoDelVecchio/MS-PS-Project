@@ -195,3 +195,23 @@ class Test_MatchingEngine(unittest.TestCase):
         
         self.assert_command("print book", "Buy Orders:\n10 @ 15 (id_3)\nSell Orders:")
     
+    def test_add_limit_buys_and_one_market_sell_that_partially_consume_one_level(self):
+        self.assert_command("limit buy 20 20", "Order Created: buy 20 @ 20 id_1")
+        self.assert_command("limit buy 25 20", "Order Created: buy 20 @ 25 id_2")
+        self.assert_command("limit buy 15 80", "Order Created: buy 80 @ 15 id_3")
+        
+        expected_output = "Order Created: sell 10 @ market id_4\nTrade, price: 25, qty: 10"
+        self.assert_command("market sell 10", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\n10 @ 25 (id_2)\n20 @ 20 (id_1)\n80 @ 15 (id_3)\nSell Orders:")
+    
+    def test_add_limit_sells_and_one_market_buy_that_partially_consume_one_level(self):
+        self.assert_command("limit sell 20 20", "Order Created: sell 20 @ 20 id_1")
+        self.assert_command("limit sell 25 20", "Order Created: sell 20 @ 25 id_2")
+        self.assert_command("limit sell 15 80", "Order Created: sell 80 @ 15 id_3")
+        
+        expected_output = "Order Created: buy 10 @ market id_4\nTrade, price: 15, qty: 10"
+        self.assert_command("market buy 10", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n70 @ 15 (id_3)\n20 @ 20 (id_1)\n20 @ 25 (id_2)")
+    
