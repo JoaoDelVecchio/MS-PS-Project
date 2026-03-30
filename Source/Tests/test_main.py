@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 import io
 
-from Source.main import CommandParser
+from Controllers.command_parser import CommandParser
 
 class Test_Book_Foundations(unittest.TestCase):
     def setUp(self):
