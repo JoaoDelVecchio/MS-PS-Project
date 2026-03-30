@@ -147,6 +147,7 @@ class MatchingEngine:
         print(f"Order Created: {side} {qty} @ {price} {order_id}")
 
         remaining_qty = qty
+        trades = {}
 
         if side.lower() == "sell":
             while remaining_qty > 0:
@@ -167,7 +168,7 @@ class MatchingEngine:
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
 
-                print(f"Trade, price: {trade_price}, qty: {traded_qty}")   
+                trades[trade_price] = trades.get(trade_price, 0) + traded_qty
         elif side.lower() == "buy":
             while remaining_qty > 0:
                 best_ask_list = self.limit_order_book.get_best_ask()
@@ -187,16 +188,20 @@ class MatchingEngine:
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
 
-                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+                trades[trade_price] = trades.get(trade_price, 0) + traded_qty
 
         if remaining_qty > 0:
             self.limit_order_book.add_limit_order(order_id, side, price, remaining_qty)
+        
+        for price, traded_qty in trades.items():
+            print(f"Trade, price: {price}, qty: {traded_qty}")
 
     def proccess_market_order(self, side, qty):
         order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ market {order_id}")
 
         remaining_qty = qty
+        trades = {}
 
         if side.lower() == "sell":
             while remaining_qty > 0:
@@ -206,7 +211,6 @@ class MatchingEngine:
 
                 resting_order = best_bid_list.head
                 trade_price = resting_order.price
-
                 traded_qty = min(remaining_qty, resting_order.qty)
 
                 remaining_qty -= traded_qty
@@ -215,7 +219,8 @@ class MatchingEngine:
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
 
-                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+                trades[trade_price] = trades.get(trade_price, 0) + traded_qty
+
         elif side.lower() == "buy":
             while remaining_qty > 0:
                 best_ask_list = self.limit_order_book.get_best_ask()
@@ -224,7 +229,6 @@ class MatchingEngine:
 
                 resting_order = best_ask_list.head
                 trade_price = resting_order.price
-
                 traded_qty = min(remaining_qty, resting_order.qty)
 
                 remaining_qty -= traded_qty
@@ -233,7 +237,10 @@ class MatchingEngine:
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
 
-                print(f"Trade, price: {trade_price}, qty: {traded_qty}")
+                trades[trade_price] = trades.get(trade_price, 0) + traded_qty
+
+        for price, traded_qty in trades.items():
+            print(f"Trade, price: {price}, qty: {traded_qty}")
 
 class CommandParser():
     def __init__(self):

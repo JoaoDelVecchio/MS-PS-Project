@@ -220,7 +220,7 @@ class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
         self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_2")
         self.assert_command("limit buy 10 50", "Order Created: buy 50 @ 10 id_3")
         
-        expected_output = "Order Created: sell 70 @ market id_4\nTrade, price: 10, qty: 50\nTrade, price: 10, qty: 20"
+        expected_output = "Order Created: sell 70 @ market id_4\nTrade, price: 10, qty: 70"
         self.assert_command("market sell 70", expected_output)
         
         self.assert_command("print book", "Buy Orders:\n30 @ 10 (id_2)\n50 @ 10 (id_3)\nSell Orders:")
@@ -230,10 +230,19 @@ class Test_MatchingEngine_Market_and_Limit_Orders(unittest.TestCase):
         self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
         self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_3")
         
-        expected_output = "Order Created: buy 70 @ market id_4\nTrade, price: 10, qty: 50\nTrade, price: 10, qty: 20"
+        expected_output = "Order Created: buy 70 @ market id_4\nTrade, price: 10, qty: 70"
         self.assert_command("market buy 70", expected_output)
         
         self.assert_command("print book", "Buy Orders:\nSell Orders:\n30 @ 10 (id_2)\n50 @ 10 (id_3)")
+    
+    def test_limit_order_buy_that_consumes_two_limit_sells_at_same_level_with_time_priority(self):
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_1")
+        self.assert_command("limit sell 10 50", "Order Created: sell 50 @ 10 id_2")
+        
+        expected_output = "Order Created: buy 90 @ 40 id_3\nTrade, price: 10, qty: 90"
+        self.assert_command("limit buy 40 90", expected_output)
+        
+        self.assert_command("print book", "Buy Orders:\nSell Orders:\n10 @ 10 (id_2)")
     
     def test_the_sequence_of_the_statement(self):
         self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
