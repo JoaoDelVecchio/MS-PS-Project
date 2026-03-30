@@ -247,6 +247,9 @@ class MatchingEngine:
             print(f"{qty} @ {price:g} ({order_id})")
 
     def proccess_modify_order(self, order_id, new_price=None, new_qty=None):
+        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
+        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
+
         order = self.limit_order_book.get_order(order_id)
         if not order:
             print("Error") 
@@ -272,6 +275,8 @@ class MatchingEngine:
         print("Order Modified")
         self.limit_order_book.remove_order(order_id)
         self.proccess_limit_order(side, final_price, final_qty, order_id=order_id)
+
+        self._check_and_update_pegged(old_limit_bid, old_limit_ask)
     
     def proccess_cancel_order(self, order_id):
         old_limit_bid = self.limit_order_book.get_best_limit_bid_price()

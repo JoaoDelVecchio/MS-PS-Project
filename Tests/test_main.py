@@ -602,7 +602,6 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
         expected_book = "Buy Orders:\nSell Orders:\n100 @ 20 (id_2)\n30 @ 20 (id_3)"
         self.assert_command("print book", expected_book)
     
-    # testa o cancelamento de uma ordem pegged e o impacto disso no livro de ordens
     def test_cancel_pegged_order(self):
         self.assert_command("limit sell 15 100", "Order Created: sell 100 @ 15 id_1")
         self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
@@ -631,4 +630,110 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
 
         expected_book = "Buy Orders:\nSell Orders:\n100 @ 15 (id_1)\n120 @ 15 (id_3)\n70 @ 15 (id_2)"
         self.assert_command("print book", expected_book)
+    
+    def test_modify_pegged_buy_order_increase_qty_and_lose_priority_between_pegs(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 30", "Order Created: buy 30 @ pegged id_2")
+        self.assert_command("peg bid buy 20", "Order Created: buy 20 @ pegged id_3")
+        self.assert_command("limit buy 10 80", "Order Created: buy 80 @ 10 id_4")
+        self.assert_command("peg bid buy 18", "Order Created: buy 18 @ pegged id_5")
+
+        self.assert_command("modify id_2 qty 50", "Order Modified")
+
+        expected_book = "Buy Orders:\n100 @ 10 (id_1)\n20 @ 10 (id_3)\n80 @ 10 (id_4)\n18 @ 10 (id_5)\n50 @ 10 (id_2)\nSell Orders:"
+        self.assert_command("print book", expected_book)
+    
+
+    def test_time_priority_pegged_buy_order_when_bid_is_lowered(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 30", "Order Created: buy 30 @ pegged id_2")
+        self.assert_command("peg bid buy 20", "Order Created: buy 20 @ pegged id_3")
+        self.assert_command("limit buy 10 80", "Order Created: buy 80 @ 10 id_4")
+        self.assert_command("peg bid buy 25", "Order Created: buy 25 @ pegged id_5")
+
+        expected_output = "Order Created: sell 110 @ market id_6\nTrade, price: 10, qty: 110"
+        self.assert_command("market sell 110", expected_output)
+
+        self.assert_command("modify id_4 price 9.99", "Order Modified")
+
+        expected_book = "Buy Orders:\n20 @ 9.99 (id_2)\n20 @ 9.99 (id_3)\n25 @ 9.99 (id_5)\n80 @ 9.99 (id_4)\nSell Orders:"
+        self.assert_command("print book", expected_book)
+    
+    def test_modify_pegged_sell_order_when_offer_is_raised(self):
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_1")
+        self.assert_command("limit sell 25 100", "Order Created: sell 100 @ 25 id_2")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_3")
+
+        self.assert_command("modify id_1 price 30", "Order Modified")
+
+        expected_book = "Buy Orders:\nSell Orders:\n100 @ 25 (id_2)\n50 @ 25 (id_3)\n100 @ 30 (id_1)"
+        self.assert_command("print book", expected_book)
+    
+    def test_modify_pegged_sell_order_when_offer_is_lowered(self):
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_1")
+        self.assert_command("limit sell 25 100", "Order Created: sell 100 @ 25 id_2")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_3")
+
+        self.assert_command("modify id_2 price 15", "Order Modified")
+
+        expected_book = "Buy Orders:\nSell Orders:\n50 @ 15 (id_3)\n100 @ 15 (id_2)\n100 @ 20 (id_1)"
+        self.assert_command("print book", expected_book)
+    
+    def test_market_sell_consumes_limit_and_pegged_at_same_price(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 40", "Order Created: buy 40 @ pegged id_2")
+        
+        self.assert_command("market sell 180", "Order Created: sell 180 @ market id_3\nTrade, price: 10, qty: 140")
+        
+        expected_book = "Buy Orders:\nSell Orders:"
+        self.assert_command("print book", expected_book)
+    
+    def test_sweep_with_pegged_orders(self):
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_1")
+        self.assert_command("limit sell 25 100", "Order Created: sell 100 @ 25 id_2")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_3")
+        self.assert_command("limit sell 30 100", "Order Created: sell 100 @ 30 id_4")
+        
+        expected_output = "Order Created: buy 300 @ 35 id_5\nTrade, price: 20, qty: 150\nTrade, price: 25, qty: 100\nTrade, price: 30, qty: 50"
+        self.assert_command("limit buy 35 300", expected_output)
+
+        expected_book = "Buy Orders:\nSell Orders:\n50 @ 30 (id_4)"
+        self.assert_command("print book", expected_book)
+
+class Test_MatchingEngine_Edge_Cases(unittest.TestCase):
+    def setUp(self):
+        self.parser = CommandParser()
+        
+        self.patcher = patch('sys.stdout', new_callable=io.StringIO)
+        self.mock_stdout = self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
+
+    def assert_command(self, command: str, expected_output: str):
+        self.parser.process(command)
+        output = self.mock_stdout.getvalue().strip()
+
+        self.assertEqual(output, expected_output)
+        
+        self.mock_stdout.seek(0)
+        self.mock_stdout.truncate(0) 
+    
+    # Testa o comportamento perante entradas inválidas (Typos e valores incorretos)
+    def test_invalid_command(self):
+        self.assert_command("lmit buy 10 100", "Error: Invalid command")
+        self.assert_command("limit buy -10 100", "Error: Quantity and price must be positive")
+        self.assert_command("invalid command", "Error: Invalid command")
+        self.assert_command("market sell 0", "Error: Quantity and price must be positive")
+        self.assert_command("market sell 12.4", "Error: Quantity must be integer")
+        self.assert_command("limit buy 10 -100", "Error: Quantity and price must be positive")
+        self.assert_command("limit buy 10 14.2", "Error: Quantity must be integer")
+        self.assert_command("limit buy -10 -100", "Error: Quantity and price must be positive")
+        self.assert_command("limit buy 10", "Error: Invalid command")
+        self.assert_command("limit buy 10 100 extra", "Error: Invalid command")
+        self.assert_command("cancel", "Error: Invalid command")
+        self.assert_command("cancel id_1 extra", "Error: Invalid command")
+        self.assert_command("modify", "Error: Invalid command")
+        self.assert_command("modify id_1", "Error: Invalid command")
+
     

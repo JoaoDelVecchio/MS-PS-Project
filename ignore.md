@@ -241,7 +241,7 @@ Teste 35: Peg Offer simples.
 
 Teste 36 e 53: Peg Offer atualizando com melhora de preço (Testa o FURA-FILA / prepend).
 
-Teste 37 e 38: Peg Offer atualizando quando o topo é consumido (Recuo pro fim da fila).
+Teste 37 e 38: Peg Offer atualizando quando o topo é consumido.
 
 Teste 60: Peg Bid melhora o preço (FURA-FILA / prepend).
 
