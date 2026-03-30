@@ -255,6 +255,10 @@ class MatchingEngine:
             print("Error") 
             return
         
+        if isinstance(order, PeggedOrder) and new_price is not None:
+            print("Error: Cannot modify price of a pegged order")
+            return
+        
         if new_qty is not None and new_qty <= 0:
             print("Error")
             return
