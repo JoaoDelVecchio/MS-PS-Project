@@ -49,26 +49,28 @@ class OrderDoubleLinkedList:
             self.tail = order.prev
 
 class Order:
-    def __init__(self, order_id, side, qty):
+    def __init__(self, order_id, side, price, qty):
         self.order_id = order_id
         self.seq_id = 0
         self.side = side
+        self.price = price
         self.qty = qty
         self.prev = None
         self.next = None
 
+    def reduce_qty(self, amount):
+        if amount > self.qty:
+            raise ValueError("Amount exceeds current quantity")
+        self.qty -= amount
+
 class LimitOrder(Order):
     def __init__(self, order_id, side, price, qty):
-        super().__init__(order_id, side, qty)
-        self.price = price
-        self.prev = None
-        self.next = None
+        super().__init__(order_id, side, price, qty)
 
 class PeggedOrder(Order):
     def __init__(self, order_id, side, peg_type, price, qty):
-        super().__init__(order_id, side, qty)
-        self.price = price
-        self.peg_type = peg_type 
+        super().__init__(order_id, side, price, qty)
+        self.peg_type = peg_type
 
 class IdGenerator:
     def __init__(self):
@@ -220,6 +222,14 @@ class LimitOrderBook:
                 current = current.next
         return None
 
+    def get_best_resting_bid(self):
+        best_list = self.get_best_bid()
+        return best_list.head if best_list else None
+
+    def get_best_resting_ask(self):
+        best_list = self.get_best_ask()
+        return best_list.head if best_list else None
+    
 class BookPrinter:
     @staticmethod
     def print_book(limit_order_book):
@@ -270,7 +280,7 @@ class MatchingEngine:
         qty_increased = (new_qty is not None and new_qty > order.qty)
 
         if not price_changed and not qty_increased and qty_decreased:
-            order.qty = new_qty
+            order.reduce_qty(order.qty - new_qty)
             print("Order Modified")
             return
 
@@ -307,11 +317,10 @@ class MatchingEngine:
 
         if side.lower() == "sell":
             while remaining_qty > 0:
-                best_bid_list = self.limit_order_book.get_best_bid()
-                if best_bid_list is None or best_bid_list.head is None:
+                resting_order = self.limit_order_book.get_best_resting_bid()
+                if resting_order is None:
                     break
 
-                resting_order = best_bid_list.head
                 if price > resting_order.price:
                     break
 
@@ -319,19 +328,19 @@ class MatchingEngine:
                 trade_price = resting_order.price
 
                 remaining_qty -= traded_qty
-                resting_order.qty -= traded_qty
+                resting_order.reduce_qty(traded_qty)
 
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
 
                 trades[trade_price] = trades.get(trade_price, 0) + traded_qty
+
         elif side.lower() == "buy":
             while remaining_qty > 0:
-                best_ask_list = self.limit_order_book.get_best_ask()
-                if best_ask_list is None or best_ask_list.head is None:
+                resting_order = self.limit_order_book.get_best_resting_ask()
+                if resting_order is None:
                     break
 
-                resting_order = best_ask_list.head
                 if price < resting_order.price:
                     break
 
@@ -339,7 +348,7 @@ class MatchingEngine:
                 trade_price = resting_order.price
 
                 remaining_qty -= traded_qty
-                resting_order.qty -= traded_qty
+                resting_order.reduce_qty(traded_qty)
 
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
@@ -366,16 +375,15 @@ class MatchingEngine:
 
         if side.lower() == "sell":
             while remaining_qty > 0:
-                best_bid_list = self.limit_order_book.get_best_bid()
-                if best_bid_list is None or best_bid_list.head is None:
+                resting_order = self.limit_order_book.get_best_resting_bid()
+                if resting_order is None:
                     break
 
-                resting_order = best_bid_list.head
                 trade_price = resting_order.price
                 traded_qty = min(remaining_qty, resting_order.qty)
 
                 remaining_qty -= traded_qty
-                resting_order.qty -= traded_qty
+                resting_order.reduce_qty(traded_qty)
 
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
@@ -384,16 +392,15 @@ class MatchingEngine:
 
         elif side.lower() == "buy":
             while remaining_qty > 0:
-                best_ask_list = self.limit_order_book.get_best_ask()
-                if best_ask_list is None or best_ask_list.head is None:
+                resting_order = self.limit_order_book.get_best_resting_ask()
+                if resting_order is None:
                     break
 
-                resting_order = best_ask_list.head
                 trade_price = resting_order.price
                 traded_qty = min(remaining_qty, resting_order.qty)
 
                 remaining_qty -= traded_qty
-                resting_order.qty -= traded_qty
+                resting_order.reduce_qty(traded_qty)
 
                 if resting_order.qty == 0:
                     self.limit_order_book.remove_order(resting_order.order_id)
@@ -406,15 +413,19 @@ class MatchingEngine:
         self._check_and_update_pegged(old_limit_bid, old_limit_ask)
 
     def proccess_pegged_order(self, peg_type, side, qty):
-        old_limit_bid = self.limit_order_book.get_best_limit_bid_price()
-        old_limit_ask = self.limit_order_book.get_best_limit_ask_price()
-        
-        price = old_limit_bid if peg_type == "bid" else old_limit_ask
+        if peg_type == "bid":
+            best_order = self.limit_order_book.get_best_resting_bid()
+        elif peg_type == "offer":
+            best_order = self.limit_order_book.get_best_resting_ask()
+        else:
+            print("Error")
+            return
             
-        if price is None:
+        if best_order is None:
             print("Error")
             return
 
+        price = best_order.price
         order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ pegged {order_id}")
         self.limit_order_book.add_pegged_order(order_id, side, peg_type, price, qty)
