@@ -548,3 +548,14 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
 
         expected_output= "Buy Orders:\n100 @ 10 (id_1)\nSell Orders:\n200 @ 10.5 (id_2)\n150 @ 10.5 (id_4)\n100 @ 10.6 (id_3)"
         self.assert_command("print book", expected_output)
+    
+    def test_pegged_buy_order_update_to_better_price(self):
+        self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_1")
+        self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
+        
+        expected_output = "Order Created: sell 100 @ 10 id_3"
+        self.assert_command("limit sell 10 100", expected_output)
+
+        expected_output= "Buy Orders:\nSell Orders:\n50 @ 10 (id_2)\n100 @ 10 (id_3)\n100 @ 20 (id_1)"
+        self.assert_command("print book", expected_output)
+    
