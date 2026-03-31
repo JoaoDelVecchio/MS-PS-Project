@@ -180,7 +180,7 @@ class MatchingEngine:
         else:
             print("Error")
             return
-                
+
         if best_price is None:
             print("Error")
             return

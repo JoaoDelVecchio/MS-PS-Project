@@ -52,11 +52,15 @@ class OrderDoubleLinkedList:
 
 class LimitOrderBook:
     def __init__(self):
+        # orders_map maps order_id to Order objects for O(1) access.
         self.orders_map = {}
+        # bids_dict and asks_dict map price levels to doubly linked lists of Orders with same price.
         self.bids_dict = {}
         self.asks_dict = {}
+        # bids_prices and asks_prices maintain sorted lists of price levels for quick access to best prices.
         self.bids_prices = []
         self.asks_prices = []
+        # pegged_bids and pegged_asks track pegged orders for quick updates when best limit prices change.
         self.pegged_bids = {}
         self.pegged_asks = {}
         self.time_counter = 0
