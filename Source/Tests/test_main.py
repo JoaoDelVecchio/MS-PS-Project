@@ -507,6 +507,33 @@ class Test_MatchingEngine_Cancel_and_Modify(unittest.TestCase):
 
         self.assert_command("modify id_1 price 9.98", "Order Modified")
         self.assert_command("print book", "Buy Orders:\n100 @ 9.99 (id_2)\n200 @ 9.98 (id_1)\nSell Orders:\n100 @ 10.5 (id_3)")
+    
+    def test_pegged_with_limit_behind_it_in_the_queue(self):
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 50", "Order Created: buy 50 @ pegged id_2")
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_3")
+        
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+        
+        self.assert_command("peg bid buy 20", "Order Created: buy 20 @ pegged id_4")
+    
+    def test_pegged_order_with_only_pegged_in_book_returns_error(self):
+        self.assert_command("peg bid buy 10", "Error")
+
+        self.assert_command("limit buy 10 100", "Order Created: buy 100 @ 10 id_1")
+        self.assert_command("peg bid buy 20", "Order Created: buy 20 @ pegged id_2")
+
+        self.assert_command("cancel id_1", "Order Cancelled: id_1")
+
+        expected_book_1 = "Buy Orders:\n20 @ 10 (id_2)\nSell Orders:"
+        self.assert_command("print book", expected_book_1)
+
+        self.assert_command("peg bid buy 20", "Error")
+
+        self.assert_command("limit buy 8 100", "Order Created: buy 100 @ 8 id_3")
+        
+        expected_book_2 = "Buy Orders:\n20 @ 8 (id_2)\n100 @ 8 (id_3)\nSell Orders:"
+        self.assert_command("print book", expected_book_2)
 
 class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
     def setUp(self):
@@ -720,12 +747,13 @@ class Test_MatchingEngine_Pegged_Orders(unittest.TestCase):
         expected_book = "Buy Orders:\nSell Orders:\n50 @ 25 (id_2)\n100 @ 25 (id_3)"
         self.assert_command("print book", expected_book)
     
-    # Testa a tentativa de alterar o PREÇO de uma ordem Pegged (deve gerar erro, pois o preço é dinâmico)
     def test_modify_price_of_pegged_order(self):
         self.assert_command("limit sell 20 100", "Order Created: sell 100 @ 20 id_1")
         self.assert_command("peg offer sell 50", "Order Created: sell 50 @ pegged id_2")
 
         self.assert_command("modify id_2 price 25", "Error: Cannot modify price of a pegged order")
+    
+    
 
 class Test_MatchingEngine_Edge_Cases(unittest.TestCase):
     def setUp(self):

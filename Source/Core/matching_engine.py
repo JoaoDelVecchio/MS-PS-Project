@@ -174,19 +174,18 @@ class MatchingEngine:
 
     def proccess_pegged_order(self, peg_type, side, qty):
         if peg_type == "bid":
-            best_order = self.limit_order_book.get_best_resting_bid()
+            best_price = self.limit_order_book.get_best_limit_bid_price()
         elif peg_type == "offer":
-            best_order = self.limit_order_book.get_best_resting_ask()
+            best_price = self.limit_order_book.get_best_limit_ask_price()
         else:
             print("Error")
             return
-            
-        if best_order is None:
+                
+        if best_price is None:
             print("Error")
             return
 
-        price = best_order.price
         order_id = self.id_generator.generate_id()
         print(f"Order Created: {side} {qty} @ pegged {order_id}")
-        self.limit_order_book.add_pegged_order(order_id, side, peg_type, price, qty)
+        self.limit_order_book.add_pegged_order(order_id, side, peg_type, best_price, qty)
         
