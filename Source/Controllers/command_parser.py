@@ -1,6 +1,7 @@
 # Controlers/command_parser.py
 from Core.matching_engine import MatchingEngine
 from Views.book_printer import BookPrinter
+from Views.volume_profile_printer import VolumeProfilePrinter
 
 class CommandParser:
     def __init__(self):
@@ -16,6 +17,8 @@ class CommandParser:
 
         if command == "print book":
             self._parse_print_book()
+        elif command == "print volume profile":
+            VolumeProfilePrinter.print_profile(self.matching_engine.limit_order_book)
         elif main_command == "limit":
             self._parse_limit(parts)
         elif main_command == "market":
