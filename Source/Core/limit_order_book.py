@@ -98,6 +98,8 @@ class LimitOrderBook:
                         self._asks_prices.remove(order.price)
                 
                 order.price = new_price
+                order.prev = None
+                order.next = None
                 self._insert_into_price_list(order)
     
     def add_limit_order(self, order_id, side, price, qty):
