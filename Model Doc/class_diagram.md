@@ -14,13 +14,16 @@ classDiagram
 
     %% Definição das Classes
     class Order {
-        +String order_id
-        +int seq_id
-        +String side
+        -String _order_id
+        -int _seq_id
+        -String _side
         +float price
         +int qty
         +Order prev
         +Order next
+        +String order_id
+        +int seq_id
+        +String side
         +reduce_qty(amount)
     }
 
@@ -40,19 +43,20 @@ classDiagram
     }
 
     class LimitOrderBook {
-        +dict orders_map
-        +dict bids_dict
-        +dict asks_dict
-        +list bids_prices
-        +list asks_prices
-        +dict pegged_bids
-        +dict pegged_asks
-        +int time_counter
+        -dict _orders_map
+        -dict _bids_dict
+        -dict _asks_dict
+        -list _bids_prices
+        -list _asks_prices
+        -dict _pegged_bids
+        -dict _pegged_asks
+        -int _time_counter
         -_insert_into_price_list(order)
         +add_limit_order(...)
         +add_pegged_order(...)
         +remove_order(order_id)
         +update_pegged_orders(...)
+        +get_order(order_id)
         +get_best_bid()
         +get_best_ask()
         +get_best_limit_bid_price()
