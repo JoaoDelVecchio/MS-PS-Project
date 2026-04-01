@@ -14,20 +14,18 @@ OBS: Sempre adicionar um teste quando der algum bug, cobrindo este bug
 
 ## 1 - Requisitos
 
-* Deve lidar com todos os casos complexos de sequências de pedidos corretamente
-* Quando um trade for realizado, deve-se mostrar na saída
-* Deve ser capaz de visualizar o livro
-* Deve ter uma prioridade por ordem de chegada
-* Deve ser possivel cancelar uma ordem
-* Deve ser possivel alterar uma ordem, em que  a ordem com alteração de preço deve ser recolocada para a faixa de preço adequado. Perdendo prioridade na fila
-* Deve ser possivel adicionar 3 tipos de ordem: pegged, market e limit
-* Deve ser robusto a erros de typo na entrada
-* Ordens limit que forem capazes de realizar trade deverao ser realizados.
+* Quando receber uma ordem do tipo Pegged, Limit ou Market, deve ser capaz de processá-la segundo as regras de mercado correspondentes.
+* Deve ser capaz de realizar operações de cancelamento e modificação de ordens ativas.
+* Deve seguir uma regra de execução baseada primeiramente no preço e, em seguida, na ordem de chegada 
+* Quando uma ordem sofrer alteração de preço, deve ser capaz de colocá-la na faixa adequada, rebaixando sua prioridade de chegada na fila.
+* Deve ser capaz de tratar e processar corretamente o matching de casos complexos e sequências de pedidos.
+* Quando um trade for realizado, deve ser capaz de emitir e exibir os detalhes da execução imediatamente na saída do sistema.
+* Deve ser capaz de exibir o estado atual do Limit Order Book para visualização.
+* Deve ser capaz de suportar erros de entrada typo ou ignorar comandos não existentes.
+* Deve realizar trade de ordens limits sempre que cruzarem o spread.
+* Os algoritmos devem ser, quando possível, no máximo O(N)
 
-
-## 2 - Testes Unitarios, em linguagem natural
-
-
+## 2 - Ideia inicial de interfaces e entidades
 
 ## 3 - Escolher e modelar a arquitetura de classes, etc.
 
@@ -40,10 +38,6 @@ Order
   * timestamp (Date/time)
 * Metodo
   * reduce_quantity()
-  * update_timestamp()
-
-Market Order (herda order)
-* Nao possui nada diferente, o tipo ja define o comportamento na engine
 
 Limit Order (herda Order)
 * Responsabilidade: Modelar ordem limite com suas caracteristicas proprias
@@ -103,7 +97,9 @@ Para essas tarefas, pensei em duas formas de estruturar meus dados
 
 Forma 1) Bid e Ask sao filas de prioridade heap, insere em O(Log(N)), extrai em O(log(N)),
 busca em O(N)
+
+
 Forma 2) Mais complicado, temos varias estruturas de dados para cada coisa que pretendemos fazer
     1 Hash Map para as ordens (chave ID, valor um ponteiro, ou referencia para o objeto na memoria) (encontro a ordem em O(1) pelo ID para cancel e modify)
     1 Lista duplamente encadeada para cada Nivel de Preço  (pois ao cancelar ou modify, ao achar a ordem pelo hash map, podemos apenas eliminar ela dessa lista, em O(1))
-    1 Arvore Binaria de Busca para os precos (chave = preco, valor = ponteiro para  a cabeca da lista duplamente encadeada), 
+    1 Arvore Binaria de Busca para os precos (chave = preco, valor = ponteiro para  a cabeca da lista duplamente encadeada)
