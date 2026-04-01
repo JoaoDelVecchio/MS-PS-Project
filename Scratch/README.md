@@ -14,7 +14,7 @@ OBS: Sempre adicionar um teste quando der algum bug, cobrindo este bug
 
 ## 1 - Requisitos
 
-* Deve lidar com todos os casos complexos de sequencias de pedidos corretamente
+* Deve lidar com todos os casos complexos de sequências de pedidos corretamente
 * Quando um trade for realizado, deve-se mostrar na saída
 * Deve ser capaz de visualizar o livro
 * Deve ter uma prioridade por ordem de chegada
@@ -77,15 +77,13 @@ Ordens de Venda
 
 5. Testa se é capaz de adicionar um limit buy e um limit sell que dao match diretamente, e nao sobra volume de nenhum
 
-Quando os inputs mostrados forem colocados, deve ser gerada as saidas correspondentes
-
 >>> limit buy 10 100
 
 >>> limit sell 10 100
 
 Trade, price: 10, qty: 100
 
-6. Testa se, ao dar match em duas ordens limites que possuem o mesmo volume, entao o book printado devera retornar vazio
+1. Testa se, ao dar match em duas ordens limites que possuem o mesmo volume, entao o book printado devera retornar vazio
 
 Quando o input for
 

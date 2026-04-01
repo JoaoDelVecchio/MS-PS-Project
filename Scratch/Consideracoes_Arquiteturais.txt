@@ -21,4 +21,4 @@ Robustez a Falhas: Comandos com erros de digitação (typos), preços negativos,
 Cancelamento de Fantasmas: Tentar cancelar ou modificar um ID de ordem que não existe mais (porque já foi 100% executada, já foi cancelada antes, ou o ID foi digitado errado) gera um erro, protegendo a integridade da memória.
 
 
-Quantity pode apenas ser iteiro
+Quantity pode apenas ser inteiro
